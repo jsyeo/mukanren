@@ -34,6 +34,16 @@ class MuKanrenTest extends FlatSpec with Matchers {
     unifiedWith5.get.valueOf(x) should be(Integer(5))
   }
 
+  "State" should "not unify terms that occur in each other" in {
+    val (s, x) = State().createVariables("x")
+    val res = s.unify(x, Pair(x, Integer(3)))
+    res should be(None)
+
+    val (s1, p, q, r) = State().createVariables("p", "q", "r")
+    val res1 = s1.assignVariables(q -> Pair(Integer(22), Pair(Integer(88), r)), r -> Pair(p, Integer(123))).unify(p, q)
+    res1 should be(None)
+  }
+
   "State" should "not unify integers with other integers" in {
     val (state, x) = State().createVariables("x")
     val s = state.assignVariables(x -> Integer(5))

@@ -133,11 +133,20 @@ object MuKanren {
       }
     }
 
+    def occursCheck(x: Term, y: Term): Boolean = (x, y) match {
+      case (_: Integer, _) | (_, _: Integer) | (Nil, _) | (_, Nil) => false
+      case (_: Variable, _: Variable) => x == y
+      case (Pair(x1, x2), _) => occursCheck(x1, y) || occursCheck(x2, y)
+      case (_, Pair(y1, y2)) => occursCheck(x, y1) || occursCheck(x, y2)
+      case _ => occursCheck(x, y)
+    }
+
     def unify(x: Term, y: Term): Option[State] = {
       val (xVal, yVal) = (valueOf(x), valueOf(y))
 
       (xVal, yVal) match {
         case _ if xVal == yVal => Some(this)
+        case _ if occursCheck(xVal, yVal) => None
         case (xVal: Variable, _) => Some(assignVariables(xVal -> yVal))
         case (_, yVal: Variable) => Some(assignVariables(yVal -> xVal))
         case (Pair(f1, s1), Pair(f2, s2)) => unify(f1, f2).flatMap(state => state.unify(s1, s2))
