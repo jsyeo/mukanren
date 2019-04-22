@@ -171,4 +171,16 @@ class MuKanrenTest extends FlatSpec with Matchers {
     results should contain(List(MyList(Integer(1), Integer(2), Integer(3)), MyList(Integer(4))))
     results should contain(List(MyList(Integer(1), Integer(2), Integer(3), Integer(4)), Nil))
   }
+
+  "reverseo" should "reverse a list" in {
+    val reverse123 = Goal.fresh {x => reverseo(MyList(Integer(1), Integer(2), Integer(3)), x)}
+    val states = reverse123.pursueIn(State())
+    states.head.results(1) should be(List(MyList(Integer(3), Integer(2), Integer(1))))
+  }
+
+  "reverseo" should "relate the output with its input" in {
+    val goal = Goal.fresh {x => reverseo(MyList(Integer(1), Integer(2), Integer(3)), MyList(Integer(3), Integer(2), x))}
+    val states = goal.pursueIn(State())
+    states.head.results(1) should be(List(Integer(1)))
+  }
 }

@@ -125,20 +125,17 @@ object MuKanren {
 
     def assignVariables(elems: (Variable, Term)*): State = State(this.variables, this.values ++ Map(elems: _*), this.counter)
 
-    def valueOf(candidate: Term): Term = {
+    def valueOf(candidate: Term): Term =
       candidate match {
         case _: Variable => values.get(candidate).map(valueOf).getOrElse(candidate)
         case Pair(f, s) => Pair(valueOf(f), valueOf(s))
         case _ => candidate
       }
-    }
 
-    def occursCheck(x: Term, y: Term): Boolean = (x, y) match {
-      case (_: Integer, _) | (_, _: Integer) | (Nil, _) | (_, Nil) => false
-      case (_: Variable, _: Variable) => x == y
-      case (Pair(x1, x2), _) => occursCheck(x1, y) || occursCheck(x2, y)
-      case (_, Pair(y1, y2)) => occursCheck(x, y1) || occursCheck(x, y2)
-      case _ => occursCheck(x, y)
+    def occursCheck(variable: Variable, y: Term): Boolean = valueOf(y) match {
+      case yVar: Variable => variable == yVar
+      case Pair(f, s) => occursCheck(variable, f) || occursCheck(variable, s)
+      case _ => false
     }
 
     def unify(x: Term, y: Term): Option[State] = {
@@ -146,9 +143,8 @@ object MuKanren {
 
       (xVal, yVal) match {
         case _ if xVal == yVal => Some(this)
-        case _ if occursCheck(xVal, yVal) => None
-        case (xVal: Variable, _) => Some(assignVariables(xVal -> yVal))
-        case (_, yVal: Variable) => Some(assignVariables(yVal -> xVal))
+        case (xVal: Variable, _) => if(occursCheck(xVal, yVal)) None else Some(assignVariables(xVal -> yVal))
+        case (_, yVal: Variable) => if(occursCheck(yVal, xVal)) None else Some(assignVariables(yVal -> xVal))
         case (Pair(f1, s1), Pair(f2, s2)) => unify(f1, f2).flatMap(state => state.unify(s1, s2))
         case _ => None
       }
@@ -178,6 +174,22 @@ object MuKanren {
         )
       }
     )
+  }
+
+  // reverse []      = []
+  // reverse (x::xs) = append (reverse xs) [x]
+  def reverseo(a: Term, b: Term): Goal = {
+    Goal.either(
+      Goal.both(
+        Goal.eq(a, MyList()),
+        Goal.eq(b, MyList())),
+      Goal.fresh { (firstA, restA, reversed) =>
+        Goal.both(
+          Goal.eq(a, Pair(firstA, restA)),
+          Goal.both(
+            reverseo(restA, reversed),
+            appendo(reversed, MyList(firstA), b)))
+      })
   }
 }
 
